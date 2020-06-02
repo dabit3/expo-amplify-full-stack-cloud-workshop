@@ -24,6 +24,7 @@ $ expo init expo-amplify
 $ cd expo-amplify
 $ npm install aws-amplify aws-amplify-react-native @react-native-community/netinfo uuid
 $ expo install expo-image-picker
+$ expo install expo-image-manipulator
 ```
 
 ### Running the app
@@ -123,68 +124,24 @@ To view the AWS services any time after their creation, run the following comman
 $ amplify console
 ```
 
-Next, create a new file in the *screens* folder called *ProfileScreen.js*.
+### Adding the authentication UI
 
-In *srceens/ProfileScreen.js*, add the following code:
+Next, open *navigation/BottomTabNavigator.js*. Here, import the `withAuthenticator` component, and change the default export to be the `withAuthenticator` wrapping the main `BottomTabNavigator` component:
 
 ```js
-/* screens/ProfileScreen.js */
-import * as React from 'react';
-import { StyleSheet, Text, Button } from 'react-native';
-import { ScrollView } from 'react-native-gesture-handler';
+/* navigation/BottomTabNavigator.js */
+
+/* Import the withAuthenticator component  */
 import { withAuthenticator } from 'aws-amplify-react-native'
-import { Auth } from 'aws-amplify';
 
-function ProfileScreen() {
-  async function signOut() {
-    await Auth.signOut()
-  }
-  return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-      <Text>Hello from Profile</Text>
-      <Button title="Sign Out" onPress={signOut} />
-    </ScrollView>
-  );
-}
+/* Remove the default export from the main component */
+function BottomTabNavigator({ navigation, route }) { /* rest of component code stays */ }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fafafa',
-  },
-  contentContainer: {
-    paddingTop: 15,
-  },
-  optionIconContainer: {
-    marginRight: 12,
-  }
-});
-
-export default withAuthenticator(ProfileScreen)
+/* Create new default export */
+export default withAuthenticator(BottomTabNavigator)
 ```
-
-In this component we import two main APIs from Amplify & Amplify React Native:
 
 *withAuthenticator* - This UI component will render an authentication flow in front of any component
-
-*Auth* - This class will allow you to call methods to handle user identity. There are over 30 methods enabling you to do things like manually sign up or sign in a user, but in our case we are using it to call `Auth.signOut()` to sign the user out.
-
-Next, open *navigation/BottomTabNavigator.js* and add the following:
-
-```js
-// First, import the new ProfileScreen components
-import ProfileScreen from '../screens/ProfileScreen'
-
-// Next, add another BottomTab component to hold the profile view 
- <BottomTab.Screen
-  name="Profile"
-  component={ProfileScreen}
-  options={{
-    title: 'Profile',
-    tabBarIcon: ({ focused }) => <TabBarIcon focused={focused} name="md-person" />
-  }}
-/>
-```
 
 Now, run the app:
 
@@ -192,19 +149,21 @@ Now, run the app:
 $ expo start
 ```
 
-You should now see an authentication flow in the *Profile* tab and be able to sign up, and in to the app.
+When the app loads, you should now see an authentication flow in front of the app. You should be able to sign up, sign in, and reset your password.
 
-### Accessing User Data & finishing the profile view.
+> Make sure that you use a real email address in order to complete the MFA required for the app sign up process.
 
-You can check to see if a user is signed in and, if so, retrieve the user metadata by calling the `currentAuthenticatedUser` method of the `Auth` class.
+### Adding the Profile screen
 
-Let's continue updating the Profile view to show the user their usernamne, email, phone number, and user ID.
+Next, create a new file in the *screens* folder called *ProfileScreen.js*.
+
+In *srceens/ProfileScreen.js*, add the following code:
 
 ```js
+/* screens/ProfileScreen.js */
 import * as React from 'react';
 import { StyleSheet, Text, Button, View } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
-import { withAuthenticator } from 'aws-amplify-react-native'
 import { Auth } from 'aws-amplify';
 
 function ProfileScreen() {
@@ -255,8 +214,35 @@ const styles = StyleSheet.create({
   }
 });
 
-export default withAuthenticator(ProfileScreen)
+export default ProfileScreen
 ```
+
+*Auth* - This class will allow you to call methods to handle user identity. There are over 30 methods enabling you to do things like manually sign up or sign in a user, but in our case we are using it to call `Auth.signOut()` to sign the user out.
+
+Next, open *navigation/BottomTabNavigator.js* and add the following:
+
+```js
+// First, import the new ProfileScreen components
+import ProfileScreen from '../screens/ProfileScreen'
+
+// Next, add another BottomTab component to hold the profile view 
+ <BottomTab.Screen
+  name="Profile"
+  component={ProfileScreen}
+  options={{
+    title: 'Profile',
+    tabBarIcon: ({ focused }) => <TabBarIcon focused={focused} name="md-person" />
+  }}
+/>
+```
+
+Now, run the app:
+
+```sh
+$ expo start
+```
+
+You should see a new *Profile* tab to the bottom right when you sign in. In this tab you should 
 
 ## Adding complex object storage
 
@@ -302,8 +288,7 @@ Update the schema with the following:
 ```graphql
 type Post @model
   @auth(rules: [
-    { allow: owner },
-    { allow: public, operations: [read] }
+    { allow: owner, operations: [create, delete, update] }
   ])
 {
   id: ID!
@@ -311,6 +296,7 @@ type Post @model
   description: String
   location: String
   image: String
+  owner: String
 }
 ```
 
@@ -339,7 +325,145 @@ Next, create a couple of new files in the *screens* folder:
 touch screens/CreatePostScreen.js screens/MyPostsScreen.js screens/AllPostsScreen.js
 ```
 
+```js
+/* screens/CreatePostScreen.js */
+import * as React from 'react';
+import { StyleSheet, Text, ActivityIndicator, Button, View, Image, TextInput } from 'react-native';
+import { ScrollView } from 'react-native-gesture-handler';
+import * as ImagePicker from 'expo-image-picker';
+import * as Permissions from 'expo-permissions';
+import Constants from 'expo-constants';
+import { Post } from '../src/models';
+import { v4 as uuid } from 'uuid';
+import Amplify, { Storage, DataStore } from 'aws-amplify';
+import * as ImageManipulator from "expo-image-manipulator";
 
+Amplify.configure({
+  'aws_appsync_authenticationType': 'AMAZON_COGNITO_USER_POOLS',
+});
+
+const initialFormState = {
+  name: '', location: '', image: ''
+}
+
+function CreatePostScreen({ navigation }) {
+  const [image, setImage] = React.useState(null)
+  const [formState, setFormState] = React.useState(initialFormState)
+  const [saving, setSaving] = React.useState(false)
+  React.useEffect(() => {
+    getPermissions()
+  }, [])
+  async function getPermissions() {
+    if (Constants.platform.ios) {
+      const { status } = await Permissions.askAsync(Permissions.CAMERA_ROLL);
+      if (status !== 'granted') {
+        alert('Sorry, we need camera roll permissions to make this work!');
+      }
+    }
+  };
+
+  async function pickImage () {
+    try {
+      const imageId = uuid()
+      setFormState({ ...formState, image: imageId })
+      let result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.All,
+        allowsEditing: true, aspect: [4, 3], quality: 1,
+      });
+      if (!result.cancelled) {
+        const manipResult = await ImageManipulator.manipulateAsync(
+          result.uri,
+          [{ resize: { width: 385, height: 385 } }],
+        );
+        setImage(manipResult.uri)
+        setSaving(true)
+        try {
+          const response = await fetch(manipResult.uri)
+          const blob = await response.blob()
+          await Storage.put(imageId, blob)
+          setSaving(false)
+        } catch (error) {
+          console.log({ error })
+          setSaving(false)
+        }
+      }
+      console.log({ result });
+    } catch (error) {
+      console.log({ error });
+    }
+  }
+
+  async function createPost() {
+    if (!image || !formState.name || !formState.location) return
+    console.log('formState: ', formState)
+    await DataStore.save(
+      new Post(formState)
+    );
+    setSaving(false)
+    setFormState(initialFormState)
+    setImage(null)
+    navigation.navigate('Posts')
+  }
+
+  function onChangeText(key, value) {
+    setFormState({ ...formState, [key]: value })
+  }
+  return (
+    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+      <TextInput
+        onChangeText={val => onChangeText('name', val)}
+        placeholder="Post name"
+        style={styles.inputStyle}
+        value={formState.name}
+      />
+       <TextInput
+        onChangeText={val => onChangeText('location', val)}
+        placeholder="Post location"
+        style={styles.inputStyle}
+        value={formState.location}
+      />
+      <Button title="Choose an image" onPress={pickImage} />
+      {image && <Image source={{ uri: image }} style={{ width: 200, height: 200 }} />}
+      <Button disabled={saving} title="Create Post" onPress={createPost} />
+      {
+        saving && (
+          <View>
+            <Text>Saving image... </Text><ActivityIndicator />
+          </View>
+        )
+      }
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#fafafa',
+    paddingHorizontal: 15
+  },
+  contentContainer: {
+    paddingTop: 15,
+  },
+  optionIconContainer: {
+    marginRight: 12,
+  },
+  userInfo: {
+    paddingHorizontal: 15,
+    paddingBottom: 10,
+    fontSize: 16,
+    fontWeight: 'bold'
+  },
+  inputStyle: {
+    height: 50,
+    backgroundColor: '#ddd',
+    marginBottom: 5,
+    paddingHorizontal: 10
+  }
+});
+
+export default CreatePostScreen
+```
 
 ## Adding a Serverless Function
 
