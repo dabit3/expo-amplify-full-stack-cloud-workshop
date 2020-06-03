@@ -13,6 +13,10 @@ In this workshop we'll learn how to build cloud-enabled mobile applications with
 - [Multiple Serverless Environments](https://github.com/dabit3/aws-amplify-workshop-react-native#multiple-serverless-environments)
 - [Removing / Deleting Services](https://github.com/dabit3/aws-amplify-workshop-react-native#removing-services)
 
+### Debugging
+
+Due to subtle differences between the JavaScript execution environments on the iOS Simulator on Mac and in your remote debugger, it is recommended that you enable "remote debugging" during development if you are developing using the iOS simulator on your Macbook.
+
 ## Getting Started - Creating the Expo app
 
 To get started we first need to create a new Expo project using the [Expo CLI](https://docs.expo.io/), & change into the new directory.
@@ -325,6 +329,12 @@ Next, create a couple of new files in the *screens* folder:
 touch screens/CreatePostScreen.js screens/MyPostsScreen.js screens/AllPostsScreen.js
 ```
 
+## Creating a post
+
+In this screen, you will be creating a component that will allow you to create a new post.
+
+Below this code snippet, I will walk through the main functionality.
+
 ```js
 /* screens/CreatePostScreen.js */
 import * as React from 'react';
@@ -337,10 +347,6 @@ import { Post } from '../src/models';
 import { v4 as uuid } from 'uuid';
 import Amplify, { Storage, DataStore } from 'aws-amplify';
 import * as ImageManipulator from "expo-image-manipulator";
-
-Amplify.configure({
-  'aws_appsync_authenticationType': 'AMAZON_COGNITO_USER_POOLS',
-});
 
 const initialFormState = {
   name: '', location: '', image: ''
@@ -365,7 +371,6 @@ function CreatePostScreen({ navigation }) {
   async function pickImage () {
     try {
       const imageId = uuid()
-      setFormState({ ...formState, image: imageId })
       let result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.All,
         allowsEditing: true, aspect: [4, 3], quality: 1,
@@ -375,6 +380,7 @@ function CreatePostScreen({ navigation }) {
           result.uri,
           [{ resize: { width: 385, height: 385 } }],
         );
+        setFormState({ ...formState, image: imageId })
         setImage(manipResult.uri)
         setSaving(true)
         try {
@@ -395,11 +401,7 @@ function CreatePostScreen({ navigation }) {
 
   async function createPost() {
     if (!image || !formState.name || !formState.location) return
-    console.log('formState: ', formState)
-    await DataStore.save(
-      new Post(formState)
-    );
-    setSaving(false)
+    await DataStore.save(new Post(formState));
     setFormState(initialFormState)
     setImage(null)
     navigation.navigate('Posts')
@@ -465,7 +467,93 @@ const styles = StyleSheet.create({
 export default CreatePostScreen
 ```
 
-## Adding a Serverless Function
+In this component there are 4 main functions:
+
+*getPermissions* -  This function prompts the user for access to the camera roll on their device.
+
+**pickImage** - This function allows the user to choose an image to store as part of the post. When choosing an image, we do the following
+  * Using the __ImageManipulator__ library we first resize the image.
+  * Next, we update the local state to set the image ID and the local image to show a local preview of the image
+  * Finaly we use the `Storage` API from Amplify to upload the image to S3
+
+**createPost** - This function calls the `DataStore` API to create a new post using the local state.
+
+**onChangeText** - This function updates the `formState` with the user input for the post name and post location.
+
+### Rendering a list of posts
+
+```js
+/* screens/AllPosts.js */
+import * as React from 'react';
+import { StyleSheet, Text } from 'react-native';
+import { ScrollView } from 'react-native-gesture-handler';
+import { DataStore, Storage } from 'aws-amplify'
+import { Post } from '../src/models'
+import PostComponent from '../components/PostComponent'
+
+function CreatePostScreen() {
+  const [posts, setPosts] = React.useState([]);
+  let subscription;
+  React.useEffect(() => {
+    fetchPosts();
+    subscribe();
+    return () => subscription && subscription.unsubscribe();
+  }, [])
+  async function subscribe() {
+    subscription = DataStore.observe(Post).subscribe(() => {
+      fetchPosts();
+    });
+  }
+  async function fetchPosts() {
+    const dataStoreQuery = await DataStore.query(Post);
+    const postData = await Promise.all(dataStoreQuery.map(async post => {
+      post = { ...post };
+      const signedImage = await Storage.get(post.image);
+      post.image = signedImage;
+      return post;
+    }))
+    setPosts(postData);
+  }
+  return (
+    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+      <Text>All Posts</Text>
+      {
+        posts.map(post => (
+          <PostComponent key={post.id} {...post} />
+        ))
+      }
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#fafafa',
+    paddingHorizontal: 15
+  },
+  contentContainer: {
+    paddingTop: 15,
+  },
+  optionIconContainer: {
+    marginRight: 12,
+  },
+  userInfo: {
+    paddingHorizontal: 15,
+    paddingBottom: 10,
+    fontSize: 16,
+    fontWeight: 'bold'
+  },
+  inputStyle: {
+    height: 50,
+    backgroundColor: '#ddd',
+    marginBottom: 5,
+    paddingHorizontal: 10
+  }
+});
+
+export default CreatePostScreen
+```
 
 ### Adding a basic Lambda Function
 
