@@ -469,7 +469,7 @@ export default CreatePostScreen
 
 In this component there are 4 main functions:
 
-*getPermissions* -  This function prompts the user for access to the camera roll on their device.
+**getPermissions** -  This function prompts the user for access to the camera roll on their device.
 
 **pickImage** - This function allows the user to choose an image to store as part of the post. When choosing an image, we do the following
   * Using the __ImageManipulator__ library we first resize the image.
