@@ -2,16 +2,7 @@
 
 In this workshop we'll learn how to build cloud-enabled mobile applications with React Native & [AWS Amplify](https://aws-amplify.github.io/).
 
-### Topics we'll be covering:
-
-- [Authentication](https://github.com/dabit3/aws-amplify-workshop-react-native#adding-authentication)
-- [GraphQL API with AWS AppSync](https://github.com/dabit3/aws-amplify-workshop-react-native#adding-a-graphql-api-with-aws-appsync)
-- [Serverless Functions](https://github.com/dabit3/aws-amplify-workshop-react-native#adding-a-serverless-function)
-- [REST API with a Lambda Function](https://github.com/dabit3/aws-amplify-workshop-react-native#adding-a-rest-api)
-- [Analytics](https://github.com/dabit3/aws-amplify-workshop-react-native#adding-analytics)
-- [Adding Storage with Amazon S3](https://github.com/dabit3/aws-amplify-workshop-react-native#working-with-storage)
-- [Multiple Serverless Environments](https://github.com/dabit3/aws-amplify-workshop-react-native#multiple-serverless-environments)
-- [Removing / Deleting Services](https://github.com/dabit3/aws-amplify-workshop-react-native#removing-services)
+The app we will be building is a basic Instagram clone that allows you to sign up, sign in, create posts, and view posts that you have created as well as others.
 
 ### Debugging
 
