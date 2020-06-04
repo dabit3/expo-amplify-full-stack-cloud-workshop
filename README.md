@@ -26,7 +26,7 @@ $ expo init expo-amplify
 > Choose a template: tabs
 
 $ cd expo-amplify
-$ npm install aws-amplify aws-amplify-react-native @react-native-community/netinfo uuid
+$ npm install aws-amplify aws-amplify-react-native @react-native-community/netinfo
 $ expo install expo-image-picker
 $ expo install expo-image-manipulator
 ```
@@ -326,14 +326,14 @@ Now, the API is created and we can start using it.
 Next, create a couple of new files in the *screens* folder:
 
 ```sh
-touch screens/CreatePostScreen.js screens/MyPostsScreen.js screens/AllPostsScreen.js
+touch screens/CreatePostScreen.js screens/PostsScreen.js screens/MyPostsScreen.js
 ```
 
-## Creating a post
+## Creating a new post
 
 In this screen, you will be creating a component that will allow you to create a new post.
 
-Below this code snippet, I will walk through the main functionality.
+> Below this code snippet, I will walk through the main functionality.
 
 ```js
 /* screens/CreatePostScreen.js */
@@ -342,11 +342,14 @@ import { StyleSheet, Text, ActivityIndicator, Button, View, Image, TextInput } f
 import { ScrollView } from 'react-native-gesture-handler';
 import * as ImagePicker from 'expo-image-picker';
 import * as Permissions from 'expo-permissions';
-import Constants from 'expo-constants';
-import { Post } from '../src/models';
-import { v4 as uuid } from 'uuid';
 import Amplify, { Storage, DataStore } from 'aws-amplify';
 import * as ImageManipulator from "expo-image-manipulator";
+import Constants from 'expo-constants';
+import { Post } from '../src/models';
+
+function uuid() {
+  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+}
 
 const initialFormState = {
   name: '', location: '', image: ''
@@ -480,10 +483,48 @@ In this component there are 4 main functions:
 
 **onChangeText** - This function updates the `formState` with the user input for the post name and post location.
 
-### Rendering a list of posts
+## Creating a Post view component
+
+To render a Post we will be creating a new component that will display the post name, location, and image.
 
 ```js
-/* screens/AllPosts.js */
+/* components/PostComponent.js */
+import React from 'react'
+import {
+  Text, View, Image, StyleSheet, Dimensions
+} from 'react-native'
+
+const { width } = Dimensions.get('window')
+
+export default function PostComponent({ name, location, image }) {
+  return (
+    <View>
+      <Text>{name}</Text>
+      <Text>{location}</Text>
+      <Image
+        style={styles.image}
+        source={{ uri: image }}
+      />
+    </View>
+  )
+}
+
+const styles = StyleSheet.create({
+  image: {
+    width: width - 30,
+    height: width - 30
+  }
+})
+```
+
+### Rendering a list of posts
+
+In this component we will be fetching the list of posts and rendering them in our UI.
+
+> Below this code snippet, I will walk through the main functionality.
+
+```js
+/* screens/PostsScreen.js */
 import * as React from 'react';
 import { StyleSheet, Text } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
@@ -491,7 +532,7 @@ import { DataStore, Storage } from 'aws-amplify'
 import { Post } from '../src/models'
 import PostComponent from '../components/PostComponent'
 
-function CreatePostScreen() {
+function PostsScreen() {
   const [posts, setPosts] = React.useState([]);
   let subscription;
   React.useEffect(() => {
@@ -499,11 +540,6 @@ function CreatePostScreen() {
     subscribe();
     return () => subscription && subscription.unsubscribe();
   }, [])
-  async function subscribe() {
-    subscription = DataStore.observe(Post).subscribe(() => {
-      fetchPosts();
-    });
-  }
   async function fetchPosts() {
     const dataStoreQuery = await DataStore.query(Post);
     const postData = await Promise.all(dataStoreQuery.map(async post => {
@@ -513,6 +549,11 @@ function CreatePostScreen() {
       return post;
     }))
     setPosts(postData);
+  }
+  async function subscribe() {
+    subscription = DataStore.observe(Post).subscribe(() => {
+      fetchPosts();
+    });
   }
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
@@ -552,567 +593,200 @@ const styles = StyleSheet.create({
   }
 });
 
-export default CreatePostScreen
+export default PostsScreen
 ```
 
-### Adding a basic Lambda Function
+In this component there are two main functions:
 
-To add a serverless function, we can run the following command:
+**fetchPosts** - This function calls the `DataStore` API and fetches the list of posts. We then map over the list of posts and fetch a signed image for each post image, and update the image property to be the signed image.
 
-```sh
-$ amplify add function
-```
+**subscribe** - This function will call `DataStore.observe()` which will listen for new posts that are created. This will provide a real-time feed of posts created by any user of the app.
 
-> Answer the following questions
+### Updating the Tabs with the new components
 
-- Provide a friendly name for your resource to be used as a label for this category in the project: __basiclambda__
-- Provide the AWS Lambda function name: __basiclambda__
-- Choose the function template that you want to use: __Hello world function__
-- Do you want to access other resources created in this project from your Lambda function? __N__
-- Do you want to edit the local lambda function now? __Y__
-
-> This should open the function package located at __amplify/backend/function/basiclambda/src/index.js__.
-
-Edit the function to look like this, & then save the file.
+Next, open __navigation/BottomTabNavigator.js__ and update 
 
 ```js
-exports.handler = (event, context, callback) => {
-  console.log('event: ', event)
-  const body = {
-    message: "Hello world!"
-  }
-  const response = {
-    statusCode: 200,
-    body
-  }
-  callback(null, response)
-}
-```
+/* navigation/BottomTabNavigator.js */
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import * as React from 'react';
 
-Next, we can test this out by running:
-
-```sh
-$ amplify function invoke basiclambda
-```
-
-- Provide the name of the script file that contains your handler function: __index.js__
-- Provide the name of the handler function to invoke: __handler__
-- Provide the relative path to the event: __event.json__
-
-You'll notice the following output from your terminal:
-
-```sh
-Testing function locally
-event:  { key1: 'value1', key2: 'value2', key3: 'value3' }
-
-Success!  Message:
-------------------
-{"statusCode":200,"body":{"message":"Hello world!"}}
-
-Done.
-Done running invoke function.
-```
-
-_Where is the event data coming from? It is coming from the values located in event.json in the function folder (__amplify/backend/function/basiclambda/src/event.json__). If you update the values here, you can simulate data coming arguments the event._
-
-Feel free to test out the function by updating `event.json` with data of your own.
-
-### Adding a function running an express server and invoking it from an API call (http)
-
-Next, we'll build a function that will be running an [Express](https://expressjs.com/) server inside of it.
-
-This new function will fetch data from a cryptocurrency API & return the values in the response.
-
-To get started, we'll create a new function:
-
-```sh
-$ amplify add function
-```
-
-> Answer the following questions
-
-- Provide a friendly name for your resource to be used as a label for this category in the project: __cryptofunction__
-- Provide the AWS Lambda function name: __cryptofunction__
-- Choose the function template that you want to use: __Serverless express function (Integration with Amazon API Gateway)__
-- Do you want to access other resources created in this project from your Lambda function? __N__
-- Do you want to edit the local lambda function now? __Y__
-
-This should open the function package located at __amplify/backend/function/cryptofunction/src/index.js__. You'll notice in this file, that the event is being proxied into an express server:
-
-```js
-exports.handler = (event, context) => {
-  console.log(`EVENT: ${JSON.stringify(event)}`);
-  awsServerlessExpress.proxy(server, event, context);
-};
-```
-
-Instead of updating the handler function itself, we'll instead update __amplify/backend/function/cryptofunction/src/app.js__ which has the actual server code we would like to be working with.
-
-Here, in __amplify/backend/function/cryptofunction/src/app.js__, we'll add the following code & save the file:
-
-```js
-// amplify/backend/function/cryptofunction/src/app.js
-
-// you should see this code already there 👇:
-app.use(function(req, res, next) {
-  res.header("Access-Control-Allow-Origin", "*")
-  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept")
-  next()
-});
-// below the above code, add the following code 👇 (be sure not to delete any other code from this file)
-const axios = require('axios')
-
-app.get('/coins', function(req, res) {
-  let apiUrl = `https://api.coinlore.com/api/tickers?start=0&limit=10`
-  
-  if (req && req.query) {
-    // here we are checking to see if there are any query parameters, and if so appending them to the request
-    const { start = 0, limit = 10 } = req.query
-    apiUrl = `https://api.coinlore.com/api/tickers/?start=${start}&limit=${limit}`
-  }
-
-  axios.get(apiUrl)
-    .then(response => {
-      res.json({
-        coins: response.data.data
-      })
-    })
-    .catch(err => res.json({ error: err }))
-})
-```
-
-In the above function we've used the __axios__ library to call another API. In order to use __axios__, we need be sure that it will be installed by updating the __package.json__ for the new function:
-
-```sh
-$ cd amplify/backend/function/cryptofunction/src
-
-$ npm install && npm install axios
-
-$ cd ../../../../../
-```
-
-Next, change back into the root directory.
-
-Now we can test this function out:
-
-```sh
-$ amplify function invoke cryptofunction
-
-? Provide the name of the script file that contains your handler function: index.js
-? Provide the name of the handler function to invoke: handler
-? Provide the relative path to the event: event.json
-```
-
-This will start up the node server. We can then make `curl` requests agains the endpoint:
-
-```sh
-curl 'localhost:3000/coins'
-```
-
-If we'd like to test out the query parameters, we can update the __event.json__ to simulate an API gateway event by adding the following:
-
-```json
-{
-    "httpMethod": "GET",
-    "path": "/coins",
-    "queryStringParameters": {
-        "start": "0",
-        "limit": "1"
-    }
-}
-```
-
-Now, stop the server and invoke the function.
-
-```sh
-$ amplify function invoke cryptofunction
-```
-
-When we invoke the function these query parameters will be passed in & the http request will be made immediately.
-
-## Adding a REST API
-
-Now that we've created the cryptocurrency Lambda function let's add an API endpoint so we can invoke it via http.
-
-To add the REST API, we can use the following command:
-
-```sh
-$ amplify add api
-```
-
-> Answer the following questions
-
-- Please select from one of the above mentioned services __REST__   
-- Provide a friendly name for your resource that will be used to label this category in the project: __cryptoapi__   
-- Provide a path (e.g., /items): __/coins__   
-- Choose lambda source __Use a Lambda function already added in the current Amplify project__   
-- Choose the Lambda function to invoke by this path: __cryptofunction__   
-- Restrict API access __Y__
-- Who should have access? __Authenticated users only__
-- What kind of access do you want for Authenticated users __read/create/update/delete__
-- Do you want to add another path? (y/N) __N__     
-
-Now the resources have been created & configured & we can push them to our account: 
-
-```bash
-$ amplify push
-
-? Are you sure you want to continue? Y
-```
-
-### Interacting with the new API
-
-Now that the API is created we can start sending requests to it & interacting with it.
-
-Let's request some data from the API:
-
-```js
-// App.js
-import React from 'react'
-import { View, Text, StyleSheet } from 'react-native'
-import { API } from 'aws-amplify'
+import TabBarIcon from '../components/TabBarIcon';
+import CreatePostScreen from '../screens/CreatePostScreen';
+import PostsScreen from '../screens/PostsScreen'
+import ProfileScreen from '../screens/ProfileScreen'
 import { withAuthenticator } from 'aws-amplify-react-native'
 
-class App extends React.Component {
-  state = {
-    coins: []
+const BottomTab = createBottomTabNavigator();
+const INITIAL_ROUTE_NAME = 'Posts';
+
+function BottomTabNavigator({ navigation, route }) {
+  navigation.setOptions({ headerTitle: getHeaderTitle(route) });
+
+  return (
+    <BottomTab.Navigator initialRouteName={INITIAL_ROUTE_NAME}>
+      <BottomTab.Screen
+        name="Posts"
+        component={PostsScreen}
+        options={{
+          title: 'Posts',
+          tabBarIcon: ({ focused }) => <TabBarIcon focused={focused} name="md-code-working" />,
+        }}
+      />
+      <BottomTab.Screen
+        name="Create Post"
+        component={CreatePostScreen}
+        options={{
+          title: 'Create Post',
+          tabBarIcon: ({ focused }) => <TabBarIcon focused={focused} name="ios-create" />,
+        }}
+      />
+      <BottomTab.Screen
+        name="Profile"
+        component={ProfileScreen}
+        options={{
+          title: 'Profile',
+          tabBarIcon: ({ focused }) => <TabBarIcon focused={focused} name="md-person" />
+        }}
+      />
+    </BottomTab.Navigator>
+  );
+}
+
+export default withAuthenticator(BottomTabNavigator)
+
+function getHeaderTitle(route) {
+  const routeName = route.state?.routes[route.state.index]?.name ?? INITIAL_ROUTE_NAME;
+
+  switch (routeName) {
+    case 'Home':
+      return 'How to get started';
+    case 'Links':
+      return 'Links to learn more';
   }
-  async componentDidMount() {
-    try {
-      // to get all coins, do not send in a query parameter
-      // const data = await API.get('cryptoapi', '/coins')
-      const data = await API.get('cryptoapi', '/coins?limit=5&start=100')
-      console.log('data from Lambda REST API: ', data)
-      this.setState({ coins: data.coins })
-    } catch (err) {
-      console.log('error fetching data..', err)
-    }
+}
+```
+
+To test it out, sign out and sign up as a new user. Create a couple of new posts under the new user account.
+
+Next, run the following command:
+
+```sh
+$ expo start
+```
+
+You should be able to view only your posts in the **My Posts** tab and see all posts in the **Posts** tab.
+
+## My posts
+
+Let's add another tab that only renders the posts we've created. Since our GraphQL schema has a field that hold the information of the owner of the post, we can create a view that only shows the posts we've created ourselves.
+
+To do so, we'll need to create a new component (**MyPostsScreen.js**) and update the bottom tab bar to render this components.
+
+First, create **screens/MyPostsScreen.js** and add the following code:
+
+```js
+import * as React from 'react';
+import { StyleSheet, Text } from 'react-native';
+import { ScrollView } from 'react-native-gesture-handler';
+import { DataStore, Storage, Auth } from 'aws-amplify'
+import { Post } from '../src/models'
+import PostComponent from '../components/PostComponent'
+
+function CreatePostScreen() {
+  const [posts, setPosts] = React.useState([]);
+  let subscription;
+  React.useEffect(() => {
+    fetchPosts();
+    subscribe();
+    return () => subscription && subscription.unsubscribe();
+  }, [])
+  async function subscribe() {
+    subscription = DataStore.observe(Post).subscribe(() => {
+      fetchPosts();
+    });
   }
-  render() {
-    return (
-      <View>
-        {
-          this.state.coins.map((c, i) => (
-            <View key={i} style={styles.row}>
-              <Text style={styles.name}>{c.name}</Text>
-              <Text>{c.price_usd}</Text>
-            </View>
-          ))
-        }
-      </View>
-    )
+  async function fetchPosts() {
+    const { username } = await Auth.currentAuthenticatedUser()
+    const dataStoreQuery = await DataStore.query(Post, p => p.owner('eq', username));
+    let postData = await Promise.all(dataStoreQuery.map(async post => {
+      post = { ...post };
+      const signedImage = await Storage.get(post.image);
+      post.image = signedImage;
+      return post;
+    }))
+    setPosts(postData);
   }
+  return (
+    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+      <Text>All Posts</Text>
+      {
+        posts.map(post => <PostComponent key={post.id} {...post} />)
+      }
+    </ScrollView>
+  );
 }
 
 const styles = StyleSheet.create({
-  row: { padding: 10 },
-  name: { fontSize: 20, marginBottom: 4 },
-})
-
-export default withAuthenticator(App, { includeGreetings: true })
-```
-
-## Adding Analytics
-
-To add analytics, we can use the following command:
-
-```sh
-$ amplify add analytics
-```
-
-> Next, we'll be prompted for the following:
-
-- Provide your pinpoint resource name: __amplifyanalytics__   
-- Apps need authorization to send analytics events. Do you want to allow guest/unauthenticated users to send analytics events (recommended when getting started)? __Y__   
-
-To deploy, run the `push` command:
-
-```sh
-$ amplify push
-```
-
-### Recording events
-
-Now that the service has been created we can now begin recording events.
-
-To record analytics events, we need to import the `Analytics` class from Amplify & then call `Analytics.record`:
-
-```js
-import { Analytics } from 'aws-amplify'
-
-state = {username: ''}
-
-async componentDidMount() {
-  try {
-    const user = await Auth.currentAuthenticatedUser()
-    this.setState({ username: user.username })
-  } catch (err) {
-    console.log('error getting user: ', err)
+  container: {
+    flex: 1,
+    backgroundColor: '#fafafa',
+    paddingHorizontal: 15
+  },
+  contentContainer: {
+    paddingTop: 15,
+  },
+  optionIconContainer: {
+    marginRight: 12,
+  },
+  userInfo: {
+    paddingHorizontal: 15,
+    paddingBottom: 10,
+    fontSize: 16,
+    fontWeight: 'bold'
+  },
+  inputStyle: {
+    height: 50,
+    backgroundColor: '#ddd',
+    marginBottom: 5,
+    paddingHorizontal: 10
   }
-}
+});
 
-recordEvent = () => {
-  Analytics.record({
-    name: 'My test event',
-    attributes: {
-      username: this.state.username
-    }
-  })
-}
-
-<Button onPress={this.recordEvent} title='Record Event' />
+export default CreatePostScreen
 ```
 
-To view the analytics in the console, run the `console` command:
-
-```sh
-$ amplify console
-```
-
-In the console, click on __Analytics__, then click on __View  in Pinpoint__. In the __Pinpoint__ console, click on __events__ and then enable filters.
-
-## Working with Storage
-
-To add storage, we can use the following command:
-
-```sh
-amplify add storage
-```
-
-> Answer the following questions   
-
-- Please select from one of the below mentioned services __Content (Images, audio, video, etc.)__
-- Please provide a friendly name for your resource that will be used to label this category in the
- project: __rnworkshopstorage__
-- Please provide bucket name: __YOUR_UNIQUE_BUCKET_NAME__
-- Who should have access: __Auth users only__
-- What kind of access do you want for Authenticated users?
-
-```sh
-❯◉ create/update
- ◉ read
- ◉ delete
-```
-
-
-```sh
-amplify push
-```
-
-Now, storage is configured & ready to use.
-
-What we've done above is created configured an Amazon S3 bucket that we can now start using for storing items.
-
-For example, if we wanted to test it out we could store some text in a file like this:
+The main difference between this component and the **PostsScreen** component is that in the `fetchPosts` function we are filtering out the posts using the DataStore predicate of `eq` for **equals**.
 
 ```js
-import { Storage } from 'aws-amplify'
-
-// create function to work with Storage
-addToStorage = () => {
-  Storage.put('textfiles/mytext.txt', `Hello World`)
-    .then (result => {
-      console.log('result: ', result)
-    })
-    .catch(err => console.log('error: ', err));
-}
-
-// add click handler
-<Button onPress={this.addToStorage} title='Add to Storage' />
+const dataStoreQuery = await DataStore.query(Post, p => p.owner('eq', username));
 ```
 
-This would create a folder called `textfiles` in our S3 bucket & store a file called __mytext.txt__ there with the code we specified in the second argument of `Storage.put`.
+### Updating the tab bar
 
-If we want to read everything from this folder, we can use `Storage.list`:
+Finally, update the tab bar with the new tab:
 
 ```js
-readFromStorage = () => {
-  Storage.list('textfiles/')
-    .then(data => console.log('data from S3: ', data))
-    .catch(err => console.log('error fetching from S3', err))
-}
+/* navigation/BottomTabNavigator.js */
+
+/* First import the new MyPostscreen component  */
+import MyPostsScreen from '../screens/MyPostsScreen'
+
+/* Next, add the new tab */ 
+<BottomTab.Screen
+  name="My Posts"
+  component={MyPostsScreen}
+  options={{
+    title: 'My Posts',
+    tabBarIcon: ({ focused }) => <TabBarIcon focused={focused} name="ios-list-box" />,
+  }}
+/>
 ```
 
-If we only want to read the single file, we can use `Storage.get`:
-
-```js
-readFromStorage = () => {
-  Storage.get('textfiles/mytext.txt')
-    .then(data => {
-      console.log('data from S3: ', data)
-      fetch(data)
-        .then(r => r.text())
-        .then(text => {
-          console.log('text: ', text)
-        })
-        .catch(e => console.log('error fetching text: ', e))
-    })
-    .catch(err => console.log('error fetching from S3', err))
-}
-```
-
-If we wanted to pull down everything, we can use `Storage.list`:
-
-```js
-readFromStorage = () => {
-  Storage.list('')
-    .then(data => console.log('data from S3: ', data))
-    .catch(err => console.log('error fetching from S3', err))
-}
-```
-
-## Multiple Serverless Environments
-
-Now that we have our API up & running, what if we wanted to update our API but wanted to test it out without it affecting our existing version?
-
-To do so, we can create a clone of our existing environment, test it out, & then deploy & test the new resources.
-
-Once we are happy with the new feature, we can then merge it back into our main environment. Let's see how to do this!
-
-### Creating a new environment
-
-To create a new environment, we can run the `env` command:
+To test it out, run the following command:
 
 ```sh
-$ amplify env add
-
-> Do you want to use an existing environment? No
-> Enter a name for the environment: apiupdate
-> Do you want to use an AWS profile? Yes
-> Please choose the profile you want to use: appsync-workshop-profile
-```
-
-Now, the new environment has been initialize, & we can deploy the new environment using the `push` command:
-
-```sh
-$ amplify push
-```
-
-Now that the new environment has been created we can get a list of all available environments using the CLI:
-
-```sh
-$ amplify env list
-```
-
-Let's update the GraphQL schema to add a new field. In __amplify/backend/api/RestaurantAPI/schema.graphql__  update the schema to the following:
-
-```graphql
-type Restaurant @model {
-  id: ID!
-  clientId: String
-  name: String!
-  type: String
-  description: String!
-  city: String!
-}
-
-type ModelRestaurantConnection {
-	items: [Restaurant]
-	nextToken: String
-}
-
-type Query {
-  listAllRestaurants(limit: Int, nextToken: String): ModelRestaurantConnection
-}
-```
-
-In the schema we added a new field to the __Restaurant__ definition to define the type of restaurant:
-
-```graphql
-type: String
-```
-
-Now, we can run amplify push again to update the API:
-
-```sh
-$ amplify push
-```
-
-To test this out, we can go into the [AppSync Console](https://console.aws.amazon.com/appsync) & log into the API.
-
-You should now see a new API called __RestaurantAPI-apiupdate__. Click on this API to view the API dashboard.
-
-If you click on __Schema__ you should notice that it has been created with the new __type__ field. Let's try it out.
-
-To test it out we need to create a new user because we are using a brand new authentication service. To do this, open the app & sign up.
-
-In the API dashboard, click on __Queries__.
-
-Next, click on the __Login with User Pools__ link.
-
-Copy the __aws_user_pools_web_client_id__ value from your __aws-exports__ file & paste it into the __ClientId__ field.
-
-Next, login using your __username__ & __password__.
-
-Now, create a new mutation & then query for it:
-
-```graphql
-mutation createRestaurant {
-  createRestaurant(input: {
-    name: "Nobu"
-    description: "Great Sushi"
-    city: "New York"
-    type: "sushi"
-  }) {
-    id name description city type
-  }
-}
-
-query listRestaurants {
-  listAllRestaurants {
-    items {
-      name
-      description
-      city
-      type
-    }
-  }
-}
-```
-
-### Merging the new environment changes into the main environment.
-
-Now that we've created a new environment & tested it out, let's check out the main environment.
-
-```sh
-$ amplify env checkout local
-```
-
-Next, run the `status` command:
-
-```sh
-$ amplify status
-```
-
-You should now see an __Update__ operation:
-
-```
-Current Environment: local
-
-| Category | Resource name   | Operation | Provider plugin   |
-| -------- | --------------- | --------- | ----------------- |
-| Api      | RestaurantAPI   | Update    | awscloudformation |
-| Auth     | cognito75a8ccb4 | No Change | awscloudformation |
-```
-
-To deploy the changes, run the push command:
-
-```sh
-$ amplify push
-```
-
-Now, the changes have been deployed & we can delete the `apiupdate` environment:
-
-```sh
-$ amplify env remove apiupdate
-
-Do you also want to remove all the resources of the environment from the cloud? Y
-```
-
-Now, we should be able to run the `list` command & see only our main environment:
-
-```sh
-$ amplify env list
+$ expo start
 ```
 
 ### Custom authentication strategies
