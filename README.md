@@ -136,7 +136,7 @@ function BottomTabNavigator({ navigation, route }) { /* rest of component code s
 export default withAuthenticator(BottomTabNavigator)
 ```
 
-*withAuthenticator* - This UI component will render an authentication flow in front of any component
+**withAuthenticator** - This UI component will render an authentication flow in front of any component
 
 Now, run the app:
 
