@@ -212,7 +212,7 @@ const styles = StyleSheet.create({
 export default ProfileScreen
 ```
 
-**Auth** - This class will allow you to call methods to handle user identity. There are over 30 methods enabling you to do things like manually sign up or sign in a user, but in our case we are using it to call `Auth.signOut()` to sign the user out.
+**Auth** - This class will allow you to call methods to handle user identity. There are over 30 methods enabling you to do things like manually sign up or sign in a user, but in our case we are using it to call `Auth.signOut()` to sign the user out and `Auth.currentAuthenticatedUser()` to check if a user is signed in and use the signed in user's metadata.
 
 Next, open **navigation/BottomTabNavigator.js** and add the following:
 
