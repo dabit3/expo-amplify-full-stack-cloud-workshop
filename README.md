@@ -4,6 +4,8 @@ In this workshop we'll learn how to build cloud-enabled mobile applications with
 
 The app we will be building is a basic Instagram clone that allows you to sign up, sign in, create posts, and view posts that you have created as well as others.
 
+![](banner.jpg)
+
 ### Debugging
 
 Due to subtle differences between the JavaScript execution environments on the iOS Simulator on Mac and in your remote debugger, it is recommended that you enable "remote debugging" during development if you are developing using the iOS simulator on your Macbook.
