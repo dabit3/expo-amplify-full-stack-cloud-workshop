@@ -67,8 +67,8 @@ $ amplify init
 - Enter a name for the project: expoamplify
 - Enter a name for the environment: dev
 - Choose your default editor: (your favorite editor)
-- Please choose the type of app that youre building javascript
-- What javascript framework are you using react-native
+- Please choose the type of app that youre building: javascript
+- What javascript framework are you using: react-native
 - Source Directory Path: /
 - Distribution Directory Path: /
 - Build Command: npm run-script build
