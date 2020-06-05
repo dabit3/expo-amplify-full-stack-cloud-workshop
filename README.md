@@ -121,7 +121,7 @@ $ amplify console
 
 ### Adding the authentication UI
 
-Next, open *navigation/BottomTabNavigator.js*. Here, import the `withAuthenticator` component, and change the default export to be the `withAuthenticator` wrapping the main `BottomTabNavigator` component:
+Next, open **navigation/BottomTabNavigator.js**. Here, import the `withAuthenticator` component, and change the default export to be the `withAuthenticator` wrapping the main `BottomTabNavigator` component:
 
 ```js
 /* navigation/BottomTabNavigator.js */
