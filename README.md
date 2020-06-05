@@ -150,7 +150,7 @@ When the app loads, you should now see an authentication flow in front of the ap
 
 ### Adding the Profile screen
 
-Next, create a new file in the *screens* folder called *ProfileScreen.js*.
+Next, create a new file in the **screens** folder called **ProfileScreen.js**.
 
 In *srceens/ProfileScreen.js*, add the following code:
 
