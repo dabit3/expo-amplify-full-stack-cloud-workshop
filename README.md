@@ -682,7 +682,7 @@ import { DataStore, Storage, Auth } from 'aws-amplify'
 import { Post } from '../src/models'
 import PostComponent from '../components/PostComponent'
 
-function CreatePostScreen() {
+function MyPostsScreen() {
   const [posts, setPosts] = React.useState([]);
   let subscription;
   React.useEffect(() => {
@@ -742,7 +742,7 @@ const styles = StyleSheet.create({
   }
 });
 
-export default CreatePostScreen
+export default MyPostsScreen
 ```
 
 The main difference between this component and the **PostsScreen** component is that in the `fetchPosts` function we are filtering out the posts using the DataStore predicate of `eq` for **equals**.
