@@ -221,7 +221,7 @@ Next, open **navigation/BottomTabNavigator.js** and add the following:
 import ProfileScreen from '../screens/ProfileScreen'
 
 // Next, add another BottomTab component to hold the profile view 
- <BottomTab.Screen
+<BottomTab.Screen
   name="Profile"
   component={ProfileScreen}
   options={{
