@@ -249,9 +249,8 @@ $ amplify add storage
 ? Please select from one of the below mentioned services: Content
 ? Please provide a friendly name for your resource that will be used to label this category in the project: images
 ? Please provide bucket name: <your-unique-bucket-name>
-? Who should have access: Auth and guest users
+? Who should have access: Auth users only
 ? What kind of access do you want for Authenticated users? create, update, read, delete
-? What kind of access do you want for Guest users? read
 ? Do you want to add a Lambda Trigger for your S3 Bucket? N
 ```
 
