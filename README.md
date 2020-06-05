@@ -300,7 +300,7 @@ Next, generate the models needed for DataStore:
 ```sh
 $ amplify codegen models
 ```
-You now should see a *models* directory located in the *src* directory of your project.
+You now should see a **models** directory located in the **src** directory of your project.
 
 Deploy the API and storage service with the Amplify `push` command:
 
