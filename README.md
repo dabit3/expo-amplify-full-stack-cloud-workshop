@@ -237,7 +237,7 @@ Now, run the app:
 $ expo start
 ```
 
-You should see a new *Profile* tab to the bottom right when you sign in. In this tab you should 
+You should see a new **Profile** tab to the bottom right when you sign in. In this tab you should 
 
 ## Adding complex object storage
 
