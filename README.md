@@ -6,6 +6,12 @@ The app we will be building is a basic Instagram clone that allows you to sign u
 
 ![](banner.jpg)
 
+### Example apps
+
+1. Message app - code [here](https://gist.github.com/dabit3/184e875c151335c00336396c99f9ef06)
+
+2. Completed full stack cloud app - code [here](https://github.com/dabit3/expo-workshop-example)
+
 ### Debugging
 
 Due to subtle differences between the JavaScript execution environments on the iOS Simulator on Mac and in your remote debugger, it is recommended that you enable "remote debugging" during development if you are developing using the iOS simulator on your Macbook.
