@@ -152,7 +152,7 @@ When the app loads, you should now see an authentication flow in front of the ap
 
 Next, create a new file in the **screens** folder called **ProfileScreen.js**.
 
-In *srceens/ProfileScreen.js*, add the following code:
+In **srceens/ProfileScreen.js**, add the following code:
 
 ```js
 /* screens/ProfileScreen.js */
