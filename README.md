@@ -315,7 +315,7 @@ Now, the API is created and we can start using it.
 Next, create a couple of new files in the *screens* folder:
 
 ```sh
-touch screens/CreatePostScreen.js screens/PostsScreen.js screens/MyPostsScreen.js
+$ touch screens/CreatePostScreen.js screens/PostsScreen.js screens/MyPostsScreen.js components/PostComponent.js
 ```
 
 ## Creating a new post
