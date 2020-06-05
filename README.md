@@ -263,19 +263,18 @@ $ amplify add api
 
 ? Please select from one of the below mentioned services: GraphQL
 ? Provide API name: travelapi
-? Choose the default authorization type for the API: API key
-? Enter a description for the API key: public
-? After how many days from now the API key should expire (1-365): 365
-? Do you want to configure advanced settings for the GraphQL API: Yes
-? Configure additional auth types? Yes
-? Choose the additional authorization types you want to configure for the API: Amazon Cognito User Pool
-? Configure conflict detection? Yes
-? Select the default resolution strategy Auto Merge
-? Do you have an annotated GraphQL schema? No
-? Do you want a guided schema creation? Yes
+? Choose the default authorization type for the API: Amazon Cognito User Pool
+? Do you want to configure advanced settings for the GraphQL API: Y
+? Configure additional auth types? N
+? Configure conflict detection? Y
+? Select the default resolution strategy: Auto Merge
+? Do you have an annotated GraphQL schema? N
+? Do you want a guided schema creation? Y
 ? What best describes your project: Single object with fields (e.g., “Todo” with ID, name, description)
-? Do you want to edit the schema now? Yes
+? Do you want to edit the schema now? Y
 ```
+
+> The schema, located at **amplify/backend/api/travelapi/schema.graphql**, should now be opened in your text editor.
 
 Update the schema with the following:
 
