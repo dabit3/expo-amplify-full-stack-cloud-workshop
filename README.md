@@ -1,4 +1,4 @@
-# Full Stack Cloud App Development with Expo and AWS Amplify
+# Full Stack Mobile App Development on AWS with Expo and Amplify
 
 In this workshop we'll learn how to build cloud-enabled mobile applications with React Native & [AWS Amplify](https://aws-amplify.github.io/).
 
